@@ -1,0 +1,46 @@
+{
+    "name": "code-sphere/oauth",
+    "description": "OAuth2 client package for CodeSphere Accounts. Stateless identity, group membership, and team checks for all CodeSphere apps.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "oauth",
+        "codesphere",
+        "sso"
+    ],
+    "homepage": "https://github.com/Code-Sphere-Development/oauth",
+    "authors": [
+        {
+            "name": "Collin Ilgner",
+            "email": "cilgner@code-sphere.de"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/contracts": "^11.0|^12.0|^13.0",
+        "illuminate/http": "^11.0|^12.0|^13.0",
+        "illuminate/auth": "^11.0|^12.0|^13.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "CodeSphere\\OAuth\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CodeSphere\\OAuth\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "CodeSphere\\OAuth\\OAuthServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
