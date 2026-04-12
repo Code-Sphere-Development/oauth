@@ -120,9 +120,14 @@ class CodeSphereAuthController extends Controller
     }
 
     /**
-     * Log the user out locally and clear the cached CodeSphere profile.
-     * Note: this does NOT log the user out of CodeSphere Accounts itself —
-     * single sign-out across all apps is not yet supported.
+     * Log the user out locally and, when Single Sign-Out is enabled,
+     * bounce the browser to CodeSphereAccounts /oauth/logout so the
+     * central session is killed too. CodeSphereAccounts then redirects
+     * back to the configured post-logout URL.
+     *
+     * When SSO logout is disabled (e.g. in local dev against a plain
+     * session stub) the controller just redirects to the local
+     * logout_redirect — the legacy behaviour.
      */
     public function logout(Request $request): RedirectResponse
     {
@@ -133,7 +138,21 @@ class CodeSphereAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect((string) config('codesphere.routes.logout_redirect', '/'));
+        $localLandingPath = (string) config('codesphere.routes.logout_redirect', '/');
+        $localLandingUrl = url($localLandingPath);
+
+        if (config('codesphere.routes.sso_logout', true) && config('codesphere.client_id')) {
+            $ssoLogoutUrl = rtrim((string) config('codesphere.url'), '/')
+                .'/oauth/logout?'
+                .http_build_query([
+                    'client_id' => config('codesphere.client_id'),
+                    'post_logout_redirect_uri' => $localLandingUrl,
+                ]);
+
+            return redirect()->away($ssoLogoutUrl);
+        }
+
+        return redirect($localLandingUrl);
     }
 
     protected function loginError(string $message): RedirectResponse

@@ -99,6 +99,45 @@ class CodeSphereService
     }
 
     /**
+     * Fetch the members of a group from CodeSphereAccounts. Used by
+     * consumer apps that want to show a read-only "who is on this
+     * team" panel without re-implementing the data model locally.
+     *
+     * @param  Authenticatable  $user  the current user, used to get a
+     *                                 valid bearer token
+     * @return array<int, array<string, mixed>> list of
+     *                                          { user_id, name, email, avatar,
+     *                                          role, status, joined_at }
+     */
+    public function fetchGroupMembers(Authenticatable $user, int|string $groupId): array
+    {
+        $token = $this->getValidAccessToken($user);
+
+        if (! $token) {
+            return [];
+        }
+
+        try {
+            $response = $this->client()
+                ->withToken($token)
+                ->get('/api/groups/'.$groupId.'/members');
+        } catch (RequestException $e) {
+            Log::warning('CodeSphere: fetchGroupMembers failed', [
+                'group' => $groupId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        if ($response->failed()) {
+            return [];
+        }
+
+        return (array) $response->json();
+    }
+
+    /**
      * Cache the user profile + groups returned by CodeSphere Accounts in
      * the current session. This is the ONLY place user data lives locally.
      */

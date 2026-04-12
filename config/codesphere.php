@@ -107,6 +107,14 @@ return [
         'register_login_route' => env('CODESPHERE_REGISTER_LOGIN_ROUTE', true),
         'home_route' => env('CODESPHERE_HOME_ROUTE', 'dashboard'),
         'logout_redirect' => env('CODESPHERE_LOGOUT_REDIRECT', '/'),
+
+        /*
+        | When true (default), logging out of the consumer app also
+        | bounces the browser to CodeSphere Accounts /oauth/logout so
+        | the central SSO session is ended too. Set to false for local
+        | development against a session stub that has no /oauth/logout.
+        */
+        'sso_logout' => env('CODESPHERE_SSO_LOGOUT', true),
     ],
 
 ];
