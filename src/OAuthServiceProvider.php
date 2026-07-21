@@ -4,6 +4,7 @@ namespace CodeSphere\OAuth;
 
 use CodeSphere\OAuth\Http\Middleware\LangMiddleware;
 use CodeSphere\OAuth\Services\CodeSphereService;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Foundation\Configuration\Middleware;
 
@@ -19,6 +20,15 @@ class OAuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->app->booted(function () {
+            $router = $this->app->make(Router::class);
+            $router->pushMiddlewareToGroup(
+                'web',
+                LangMiddleware::class
+            );
+        });
+
+
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
 
         if ($this->app->runningInConsole()) {
@@ -32,14 +42,5 @@ class OAuthServiceProvider extends ServiceProvider
 
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
-        $this->app->afterResolving(
-            Middleware::class,
-            function (Middleware $middleware) {
-                $middleware->web(prepend: [
-                    LangMiddleware::class,
-                ]);
-            }
-        );
-
     }
 }
