@@ -107,7 +107,8 @@ class CodeSphereAuthController extends Controller
         // Cache the profile in the session for subsequent requests.
         $this->codeSphere->cacheProfile($profile);
 
-        App::setLocale($profile['locale'] ?? null);
+        App::setLocale($profile['user']['language'] ?? null);
+        session(['locale' => $profile['user']['language']]);
 
         // Log the user in via the configured guard.
         Auth::login($user, true);

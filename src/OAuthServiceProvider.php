@@ -2,8 +2,10 @@
 
 namespace CodeSphere\OAuth;
 
+use CodeSphere\OAuth\Http\Middleware\LangMiddleware;
 use CodeSphere\OAuth\Services\CodeSphereService;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Configuration\Middleware;
 
 class OAuthServiceProvider extends ServiceProvider
 {
@@ -30,5 +32,14 @@ class OAuthServiceProvider extends ServiceProvider
 
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
+        $this->app->afterResolving(
+            Middleware::class,
+            function (Middleware $middleware) {
+                $middleware->web(prepend: [
+                    LangMiddleware::class,
+                ]);
+            }
+        );
+
     }
 }
