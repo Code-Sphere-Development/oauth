@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\App;
 
 /**
  * Handles the OAuth2 authorization code flow against CodeSphere Accounts.
@@ -105,6 +106,8 @@ class CodeSphereAuthController extends Controller
 
         // Cache the profile in the session for subsequent requests.
         $this->codeSphere->cacheProfile($profile);
+
+        App::setLocale($profile['locale'] ?? null);
 
         // Log the user in via the configured guard.
         Auth::login($user, true);
