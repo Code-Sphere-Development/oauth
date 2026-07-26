@@ -6,7 +6,6 @@ use CodeSphere\OAuth\Http\Middleware\LangMiddleware;
 use CodeSphere\OAuth\Services\CodeSphereService;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Foundation\Configuration\Middleware;
 
 class OAuthServiceProvider extends ServiceProvider
 {

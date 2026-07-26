@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\App;
+use Route;
+use Throwable;
 
 /**
  * Handles the OAuth2 authorization code flow against CodeSphere Accounts.
@@ -56,14 +58,15 @@ class CodeSphereAuthController extends Controller
         }
 
         if ($request->has('error')) {
-            return $this->loginError(
-                $request->input('error_description', __('Authentication failed.'))
-            );
+            return 'Authentication failed.'
+                    |> __(...)
+                    |> (fn($x) => $request->input('error_description', $x))
+                    |> $this(...);
         }
 
         try {
             $tokenData = $this->codeSphere->exchangeCodeForToken((string) $request->input('code'));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('CodeSphere token exchange failed', ['error' => $e->getMessage()]);
 
             return $this->loginError(__('Authentication failed. Please try again.'));
@@ -75,7 +78,7 @@ class CodeSphereAuthController extends Controller
 
         try {
             $profile = $this->codeSphere->fetchUserProfile($accessToken);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('CodeSphere profile fetch failed', ['error' => $e->getMessage()]);
 
             return $this->loginError(__('Could not fetch user profile.'));
@@ -119,7 +122,7 @@ class CodeSphereAuthController extends Controller
         $homeRoute = config('codesphere.routes.home_route', 'dashboard');
 
         return redirect()->intended(
-            \Route::has($homeRoute) ? route($homeRoute) : '/'
+            Route::has($homeRoute) ? route($homeRoute) : '/'
         );
     }
 
@@ -161,7 +164,7 @@ class CodeSphereAuthController extends Controller
 
     protected function loginError(string $message): RedirectResponse
     {
-        $target = \Route::has('login') ? route('login') : '/';
+        $target = Route::has('login') ? route('login') : '/';
 
         return redirect($target)->withErrors(['oauth' => $message]);
     }

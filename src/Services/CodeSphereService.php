@@ -3,6 +3,7 @@
 namespace CodeSphere\OAuth\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
@@ -47,7 +48,10 @@ class CodeSphereService
     /**
      * Exchange an authorization code for an access token + refresh token.
      *
+     * @param string $code
      * @return array{access_token:string,refresh_token?:string,expires_in?:int,token_type?:string}
+     * @throws RequestException
+     * @throws ConnectionException
      */
     public function exchangeCodeForToken(string $code): array
     {
@@ -85,7 +89,10 @@ class CodeSphereService
      * Fetch the authenticated user's profile from CodeSphere Accounts.
      * The response includes user data and the user's groups.
      *
+     * @param string $accessToken
      * @return array{user:array,groups?:array}
+     * @throws ConnectionException
+     * @throws RequestException
      */
     public function fetchUserProfile(string $accessToken): array
     {
@@ -103,11 +110,12 @@ class CodeSphereService
      * consumer apps that want to show a read-only "who is on this
      * team" panel without re-implementing the data model locally.
      *
-     * @param  Authenticatable  $user  the current user, used to get a
+     * @param Authenticatable $user the current user, used to get a
      *                                 valid bearer token
      * @return array<int, array<string, mixed>> list of
      *                                          { user_id, name, email, avatar,
      *                                          role, status, joined_at }
+     * @throws ConnectionException
      */
     public function fetchGroupMembers(Authenticatable $user, int|string $groupId): array
     {
