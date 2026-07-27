@@ -18,6 +18,7 @@ class LangMiddleware
     {
         $local = session('locale', config('app.locale'));
         App::setLocale($local);
+
         return $next($request);
     }
 }

@@ -7,11 +7,11 @@ use CodeSphere\OAuth\Services\CodeSphereService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\App;
 use Route;
 use Throwable;
 
@@ -60,7 +60,7 @@ class CodeSphereAuthController extends Controller
         if ($request->has('error')) {
             return 'Authentication failed.'
                     |> __(...)
-                    |> (fn($x) => $request->input('error_description', $x))
+                    |> (fn ($x) => $request->input('error_description', $x))
                     |> $this(...);
         }
 
