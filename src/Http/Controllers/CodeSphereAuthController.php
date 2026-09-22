@@ -58,10 +58,9 @@ class CodeSphereAuthController extends Controller
         }
 
         if ($request->has('error')) {
-            return 'Authentication failed.'
-                    |> __(...)
-                    |> (fn ($x) => $request->input('error_description', $x))
-                    |> $this(...);
+            return $this->loginError(
+                $request->input('error_description', __('Authentication failed.'))
+            );
         }
 
         try {
