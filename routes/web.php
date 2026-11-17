@@ -19,10 +19,11 @@ Route::middleware('web')->prefix($prefix)->group(function () {
         ->name('codesphere.logout');
 });
 
-// Optional: register a default /login route that immediately starts the
-// OAuth flow. Disable this in your config if your app provides its own.
+// Optional: register a default /login route that starts the OAuth flow, or
+// shows the error of a failed attempt. Disable this in your config if your
+// app provides its own.
 if (config('codesphere.routes.register_login_route', true)) {
-    Route::middleware(['web', 'guest'])->get('/login', function () {
-        return redirect()->route('codesphere.redirect');
-    })->name('login');
+    Route::middleware(['web', 'guest'])
+        ->get('/login', [CodeSphereAuthController::class, 'login'])
+        ->name('login');
 }

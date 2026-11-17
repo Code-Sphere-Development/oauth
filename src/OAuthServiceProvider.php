@@ -28,6 +28,8 @@ class OAuthServiceProvider extends ServiceProvider
         });
 
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'codesphere');
+        $this->loadJsonTranslationsFrom(__DIR__.'/../lang');
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -37,6 +39,10 @@ class OAuthServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../database/migrations' => database_path('migrations'),
             ], 'codesphere-migrations');
+
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/codesphere'),
+            ], 'codesphere-views');
 
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         }
