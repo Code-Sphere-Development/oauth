@@ -124,8 +124,26 @@ class SyncCompaniesAfterLogin
 | GET    | /auth/redirect     | codesphere.redirect  | Start the OAuth flow             |
 | GET    | /auth/callback     | codesphere.callback  | OAuth callback handler           |
 | POST   | /auth/logout       | codesphere.logout    | Log out locally                  |
-| GET    | /login (optional)  | login                | Redirects to codesphere.redirect |
+| GET    | /login (optional)  | login                | Starts the OAuth flow, or shows the last sign-in error |
 
 The `login` route is registered automatically. Set
 `CODESPHERE_REGISTER_LOGIN_ROUTE=false` in `.env` if your app provides its
 own `login` route.
+
+### Sign-in errors
+
+When the callback fails (invalid state, disallowed account type, …) the
+package redirects to `/login` with an `oauth` error. Instead of starting the
+flow again — CodeSphere Accounts would send an already signed-in user straight
+back, an endless redirect loop — `/login` then shows the message with
+"Try again" and "Sign in with a different account" (via
+CodeSphere Accounts `/oauth/logout`, only when `sso_logout` is enabled).
+
+The page is self-contained. To use your app's layout, publish and edit it:
+
+```bash
+php artisan vendor:publish --tag=codesphere-views
+```
+
+German translations ship with the package (`lang/de.json`); keys in your app's
+own `lang/de.json` take precedence.

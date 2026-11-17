@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Route;
 use Throwable;
 
@@ -34,6 +35,30 @@ class CodeSphereAuthController extends Controller
     public function __construct(
         protected CodeSphereService $codeSphere,
     ) {}
+
+    /**
+     * GET /login: start the OAuth flow, unless the previous attempt failed.
+     *
+     * A failed callback redirects here with an `oauth` error. Starting the
+     * flow again would bounce straight back, because CodeSphere Accounts
+     * returns an already signed-in user without asking: an endless redirect
+     * loop that hides the message (e.g. for a disallowed account type).
+     * Show the error instead, with a way to switch accounts.
+     */
+    public function login(Request $request): RedirectResponse|View
+    {
+        $error = $request->session()->get('errors')?->first('oauth');
+
+        if (! $error) {
+            return redirect()->route('codesphere.redirect');
+        }
+
+        return view('codesphere::login', [
+            'error' => $error,
+            'retryUrl' => route('codesphere.redirect'),
+            'switchAccountUrl' => $this->ssoLogoutUrl(route('login')),
+        ]);
+    }
 
     /**
      * Kick off the OAuth flow: store a CSRF state and redirect the browser
@@ -147,18 +172,27 @@ class CodeSphereAuthController extends Controller
         $localLandingPath = (string) config('codesphere.routes.logout_redirect', '/');
         $localLandingUrl = url($localLandingPath);
 
-        if (config('codesphere.routes.sso_logout', true) && config('codesphere.client_id')) {
-            $ssoLogoutUrl = rtrim((string) config('codesphere.url'), '/')
-                .'/oauth/logout?'
-                .http_build_query([
-                    'client_id' => config('codesphere.client_id'),
-                    'post_logout_redirect_uri' => $localLandingUrl,
-                ]);
+        $ssoLogoutUrl = $this->ssoLogoutUrl($localLandingUrl);
 
-            return redirect()->away($ssoLogoutUrl);
+        return $ssoLogoutUrl ? redirect()->away($ssoLogoutUrl) : redirect($localLandingUrl);
+    }
+
+    /**
+     * URL that ends the central CodeSphere Accounts session and returns to
+     * the given URL, or null when Single Sign-Out is disabled.
+     */
+    protected function ssoLogoutUrl(string $postLogoutRedirectUri): ?string
+    {
+        if (! config('codesphere.routes.sso_logout', true) || ! config('codesphere.client_id')) {
+            return null;
         }
 
-        return redirect($localLandingUrl);
+        return rtrim((string) config('codesphere.url'), '/')
+            .'/oauth/logout?'
+            .http_build_query([
+                'client_id' => config('codesphere.client_id'),
+                'post_logout_redirect_uri' => $postLogoutRedirectUri,
+            ]);
     }
 
     protected function loginError(string $message): RedirectResponse

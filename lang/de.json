@@ -1,0 +1,10 @@
+{
+    "Invalid OAuth state.": "Die Anmeldung ist abgelaufen oder wurde in einem anderen Tab gestartet. Bitte erneut versuchen.",
+    "Authentication failed.": "Die Anmeldung ist fehlgeschlagen.",
+    "Authentication failed. Please try again.": "Die Anmeldung ist fehlgeschlagen. Bitte erneut versuchen.",
+    "Could not fetch user profile.": "Dein Profil konnte nicht von CodeSphere geladen werden.",
+    "Your account type is not allowed for this application.": "Mit diesem Kontotyp kannst du diese Anwendung nicht nutzen. Melde dich mit einem anderen CodeSphere-Konto an.",
+    "Sign-in failed": "Anmeldung fehlgeschlagen",
+    "Sign in with a different account": "Mit anderem Konto anmelden",
+    "Try again": "Erneut versuchen"
+}
