@@ -7,9 +7,11 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Throwable;
 
 /**
  * Stateless CodeSphere Accounts client.
@@ -27,6 +29,15 @@ class CodeSphereService
     public const SESSION_GROUPS_KEY = 'codesphere.groups';
 
     public const SESSION_FETCHED_AT_KEY = 'codesphere.fetched_at';
+
+    /** Set once CodeSphere Accounts has rejected the user's tokens. */
+    public const SESSION_REVOKED_KEY = 'codesphere.revoked';
+
+    /** Seconds to wait before retrying a failed profile refresh. */
+    public const FAILED_REFRESH_RETRY = 60;
+
+    /** Cache key set app-wide while CodeSphere Accounts is unreachable. */
+    public const UNREACHABLE_CACHE_KEY = 'codesphere.unreachable';
 
     /**
      * Build the URL the browser should be redirected to in order to begin
@@ -155,6 +166,7 @@ class CodeSphereService
         Session::put(self::SESSION_USER_KEY, $profile['user'] ?? $profile);
         Session::put(self::SESSION_GROUPS_KEY, $profile['groups'] ?? []);
         Session::put(self::SESSION_FETCHED_AT_KEY, now()->timestamp);
+        Session::forget(self::SESSION_REVOKED_KEY);
     }
 
     /**
@@ -166,6 +178,7 @@ class CodeSphereService
             self::SESSION_USER_KEY,
             self::SESSION_GROUPS_KEY,
             self::SESSION_FETCHED_AT_KEY,
+            self::SESSION_REVOKED_KEY,
         ]);
     }
 
@@ -255,6 +268,21 @@ class CodeSphereService
             return;
         }
 
+        // AccountSphere just failed to connect for some request: skip the
+        // refresh instead of making every session wait for the timeout.
+        if (Cache::has(self::UNREACHABLE_CACHE_KEY)) {
+            return;
+        }
+
+        // Back off briefly before the attempt: an unreachable AccountSphere
+        // is retried after FAILED_REFRESH_RETRY seconds instead of on every
+        // request, while a stale profile (groups, roles) is not kept for a
+        // whole TTL. A successful refresh stamps the real fetch time.
+        Session::put(
+            self::SESSION_FETCHED_AT_KEY,
+            now()->timestamp - $ttl + min(self::FAILED_REFRESH_RETRY, $ttl)
+        );
+
         $this->refreshUserData($user);
     }
 
@@ -273,7 +301,10 @@ class CodeSphereService
         try {
             $profile = $this->fetchUserProfile($token);
             $this->cacheProfile($profile);
-        } catch (RequestException $e) {
+        } catch (RequestException|ConnectionException $e) {
+            $this->markUnreachable($e);
+            $this->markRevokedIfRejected($e);
+
             Log::warning('CodeSphere: failed to refresh user data', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),
@@ -302,7 +333,10 @@ class CodeSphereService
 
         try {
             $tokenData = $this->refreshAccessToken($user->refresh_token);
-        } catch (RequestException $e) {
+        } catch (RequestException|ConnectionException $e) {
+            $this->markUnreachable($e);
+            $this->markRevokedIfRejected($e);
+
             Log::warning('CodeSphere: token refresh failed', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),
@@ -318,6 +352,38 @@ class CodeSphereService
         ])->save();
 
         return $user->access_token;
+    }
+
+    /**
+     * Pause background profile refreshes app-wide after a connection error.
+     */
+    protected function markUnreachable(Throwable $e): void
+    {
+        if ($e instanceof ConnectionException) {
+            Cache::put(self::UNREACHABLE_CACHE_KEY, true, self::FAILED_REFRESH_RETRY);
+        }
+    }
+
+    /**
+     * Whether CodeSphere Accounts has rejected the current user's tokens
+     * (access revoked, refresh token expired, account deactivated). The
+     * user should then be signed out of the app.
+     */
+    public function accessRevoked(): bool
+    {
+        return (bool) Session::get(self::SESSION_REVOKED_KEY, false);
+    }
+
+    /**
+     * A 400/401/403 from CodeSphere Accounts means the credentials are no
+     * longer accepted (Passport answers a revoked refresh token with 400
+     * invalid_grant). Server errors and timeouts are not a rejection.
+     */
+    protected function markRevokedIfRejected(Throwable $e): void
+    {
+        if ($e instanceof RequestException && in_array($e->response->status(), [400, 401, 403], true)) {
+            Session::put(self::SESSION_REVOKED_KEY, true);
+        }
     }
 
     protected function client(): PendingRequest

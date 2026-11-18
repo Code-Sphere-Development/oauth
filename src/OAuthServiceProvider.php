@@ -3,6 +3,7 @@
 namespace CodeSphere\OAuth;
 
 use CodeSphere\OAuth\Http\Middleware\LangMiddleware;
+use CodeSphere\OAuth\Http\Middleware\RefreshProfileMiddleware;
 use CodeSphere\OAuth\Services\CodeSphereService;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
@@ -21,10 +22,8 @@ class OAuthServiceProvider extends ServiceProvider
     {
         $this->app->booted(function () {
             $router = $this->app->make(Router::class);
-            $router->pushMiddlewareToGroup(
-                'web',
-                LangMiddleware::class
-            );
+            $router->pushMiddlewareToGroup('web', RefreshProfileMiddleware::class);
+            $router->pushMiddlewareToGroup('web', LangMiddleware::class);
         });
 
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');

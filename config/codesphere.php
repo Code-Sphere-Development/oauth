@@ -76,6 +76,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Profile Refresh
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the cached profile is re-fetched once it is older than
+    | cache_ttl, so changes made in CodeSphere Accounts (language, name,
+    | groups) reach the app without a new login.
+    |
+    */
+
+    'refresh_profile' => (bool) env('CODESPHERE_REFRESH_PROFILE', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Locales
+    |--------------------------------------------------------------------------
+    |
+    | Locales the app supports. The request locale is taken from
+    | session('locale'), then the user's CodeSphere profile language, then
+    | the Accept-Language header, then app.locale — only values from this
+    | list are accepted.
+    |
+    */
+
+    'locales' => ['de', 'en'],
+
+    /*
+    |--------------------------------------------------------------------------
     | OAuth Scopes
     |--------------------------------------------------------------------------
     |
