@@ -3,6 +3,7 @@
 namespace CodeSphere\OAuth\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -100,7 +101,10 @@ class CodeSphereService
      * Fetch the authenticated user's profile from CodeSphere Accounts.
      * The response includes user data and the user's groups.
      *
-     * @return array{user:array,groups?:array}
+     * Usually {user: array, groups: array}; callers also accept a flat
+     * user array.
+     *
+     * @return array<string, mixed>
      *
      * @throws ConnectionException
      * @throws RequestException
@@ -319,20 +323,25 @@ class CodeSphereService
      */
     public function getValidAccessToken(?Authenticatable $user): ?string
     {
-        if (! $user) {
+        // The tokens are columns on the app's Eloquent user model
+        // (see HasCodeSphereIdentity); other user providers have none.
+        if (! $user instanceof Model) {
             return null;
         }
 
-        if ($user->token_expires_at && $user->token_expires_at->isFuture()) {
-            return $user->access_token;
+        $expiresAt = $user->getAttribute('token_expires_at');
+        $refreshToken = $user->getAttribute('refresh_token');
+
+        if ($expiresAt && $expiresAt->isFuture()) {
+            return $user->getAttribute('access_token');
         }
 
-        if (! $user->refresh_token) {
+        if (! $refreshToken) {
             return null;
         }
 
         try {
-            $tokenData = $this->refreshAccessToken($user->refresh_token);
+            $tokenData = $this->refreshAccessToken($refreshToken);
         } catch (RequestException|ConnectionException $e) {
             $this->markUnreachable($e);
             $this->markRevokedIfRejected($e);
@@ -347,11 +356,11 @@ class CodeSphereService
 
         $user->forceFill([
             'access_token' => $tokenData['access_token'],
-            'refresh_token' => $tokenData['refresh_token'] ?? $user->refresh_token,
+            'refresh_token' => $tokenData['refresh_token'] ?? $refreshToken,
             'token_expires_at' => now()->addSeconds($tokenData['expires_in'] ?? 0),
         ])->save();
 
-        return $user->access_token;
+        return $tokenData['access_token'];
     }
 
     /**
