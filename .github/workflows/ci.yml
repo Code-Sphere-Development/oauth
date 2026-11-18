@@ -14,13 +14,17 @@ concurrency:
 permissions:
   contents: read
 
+# Das Repo ist oeffentlich: GitHub-gehostete Runner statt der self-hosted
+# Proxmox-Runner, damit Fork-PRs keinen Code auf eigener Infrastruktur ausfuehren
+# (die Runner-Gruppe laesst oeffentliche Repos ohnehin nicht zu).
+
 jobs:
   # ---------------------------------------------------------------------------
   # 1. composer.json, Code-Style (Pint) und statische Analyse (Larastan)
   # ---------------------------------------------------------------------------
   static:
     name: Pint & PHPStan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
@@ -49,7 +53,7 @@ jobs:
   # ---------------------------------------------------------------------------
   tests:
     name: Tests (PHP ${{ matrix.php }}, Laravel ${{ matrix.laravel }})
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
