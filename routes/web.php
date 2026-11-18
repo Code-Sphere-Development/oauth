@@ -1,6 +1,7 @@
 <?php
 
 use CodeSphere\OAuth\Http\Controllers\CodeSphereAuthController;
+use CodeSphere\OAuth\Http\Controllers\LanguageController;
 use Illuminate\Support\Facades\Route;
 
 $prefix = (string) config('codesphere.routes.prefix', 'auth');
@@ -17,6 +18,11 @@ Route::middleware('web')->prefix($prefix)->group(function () {
     Route::post('/logout', [CodeSphereAuthController::class, 'logout'])
         ->middleware('auth')
         ->name('codesphere.logout');
+
+    // Saves the language in the user's CodeSphere Accounts profile.
+    Route::post('/language', [LanguageController::class, 'update'])
+        ->middleware('auth')
+        ->name('codesphere.language');
 });
 
 // Optional: register a default /login route that starts the OAuth flow, or

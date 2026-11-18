@@ -133,8 +133,10 @@ class CodeSphereAuthController extends Controller
         // Cache the profile in the session for subsequent requests.
         $this->codeSphere->cacheProfile($profile);
 
-        // The language now comes from the cached profile (LangMiddleware).
-        // Drop a pinned locale from an earlier login so it cannot shadow it.
+        // The language comes from the cached profile (LangMiddleware), which
+        // no longer reads session('locale'). Drop a value left by older
+        // package versions, app switchers or mcamara's localeSessionRedirect
+        // so nothing that still reads it disagrees with the profile.
         session()->forget('locale');
 
         // Log the user in via the configured guard.
