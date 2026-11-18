@@ -147,3 +147,23 @@ php artisan vendor:publish --tag=codesphere-views
 
 German translations ship with the package (`lang/de.json`); keys in your app's
 own `lang/de.json` take precedence.
+
+## Language
+
+The package adds two middleware to the `web` group:
+
+- `RefreshProfileMiddleware` re-fetches the session-cached profile once it is
+  older than `cache_ttl` (default 15 minutes). A failed refresh keeps the cached
+  profile and is retried only after the next `cache_ttl`. Disable with
+  `CODESPHERE_REFRESH_PROFILE=false`.
+- `LangMiddleware` sets the app and Carbon locale from, in this order:
+  1. `session('locale')` — an explicit language switch inside your app
+  2. the user's language in CodeSphere Accounts (cached profile)
+  3. the `Accept-Language` header
+  4. `app.locale`
+
+  Only locales listed in `codesphere.locales` (default `de`, `en`) are used.
+
+A language change in CodeSphere Accounts therefore reaches every app within
+`cache_ttl`, also for users signed in again via the remember-me cookie. Apps do
+not need their own locale middleware.

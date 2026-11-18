@@ -255,6 +255,10 @@ class CodeSphereService
             return;
         }
 
+        // Count the attempt even if it fails, so an unreachable
+        // AccountSphere is not hit again on every request.
+        Session::put(self::SESSION_FETCHED_AT_KEY, now()->timestamp);
+
         $this->refreshUserData($user);
     }
 
@@ -273,7 +277,7 @@ class CodeSphereService
         try {
             $profile = $this->fetchUserProfile($token);
             $this->cacheProfile($profile);
-        } catch (RequestException $e) {
+        } catch (RequestException|ConnectionException $e) {
             Log::warning('CodeSphere: failed to refresh user data', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),
@@ -302,7 +306,7 @@ class CodeSphereService
 
         try {
             $tokenData = $this->refreshAccessToken($user->refresh_token);
-        } catch (RequestException $e) {
+        } catch (RequestException|ConnectionException $e) {
             Log::warning('CodeSphere: token refresh failed', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),

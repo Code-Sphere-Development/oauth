@@ -7,7 +7,6 @@ use CodeSphere\OAuth\Services\CodeSphereService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -134,8 +133,9 @@ class CodeSphereAuthController extends Controller
         // Cache the profile in the session for subsequent requests.
         $this->codeSphere->cacheProfile($profile);
 
-        App::setLocale($profile['user']['language'] ?? null);
-        session(['locale' => $profile['user']['language']]);
+        // The language now comes from the cached profile (LangMiddleware).
+        // Drop a pinned locale from an earlier login so it cannot shadow it.
+        session()->forget('locale');
 
         // Log the user in via the configured guard.
         Auth::login($user, true);
