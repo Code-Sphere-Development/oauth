@@ -1,0 +1,17 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        - routes
+    ignoreErrors:
+        # The trait is meant for the consuming app's User model.
+        - identifier: trait.unused
+          path: src/Concerns/HasCodeSphereIdentity.php
+        # Larastan only knows the app's view paths, not the package's
+        # codesphere:: namespace registered in the service provider.
+        - identifier: argument.type
+          message: '#view-string#'
+          path: src/Http/Controllers/CodeSphereAuthController.php

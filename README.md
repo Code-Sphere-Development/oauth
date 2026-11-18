@@ -172,3 +172,14 @@ The package adds two middleware to the `web` group:
 A language change in CodeSphere Accounts therefore reaches every app within
 `cache_ttl`, also for users signed in again via the remember-me cookie. Apps do
 not need their own locale middleware.
+
+## Development
+
+```bash
+composer install
+composer ci        # Pint, PHPStan (Larastan, level 5) and Pest
+```
+
+GitHub Actions runs the same checks on every pull request, with Pest against
+PHP 8.2–8.5 and Laravel 12 and 13. There is no `composer.lock`, so each
+combination resolves the newest compatible dependencies.
