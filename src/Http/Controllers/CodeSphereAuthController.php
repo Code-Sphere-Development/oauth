@@ -164,7 +164,8 @@ class CodeSphereAuthController extends Controller
     {
         $this->codeSphere->clearCache();
 
-        Auth::guard('web')->logout();
+        // The guard the callback signed the user in with (Auth::login).
+        Auth::guard()->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
