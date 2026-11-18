@@ -28,6 +28,9 @@ class CodeSphereService
 
     public const SESSION_FETCHED_AT_KEY = 'codesphere.fetched_at';
 
+    /** Seconds to wait before retrying a failed profile refresh. */
+    public const FAILED_REFRESH_RETRY = 60;
+
     /**
      * Build the URL the browser should be redirected to in order to begin
      * the OAuth authorization code flow.
@@ -255,9 +258,14 @@ class CodeSphereService
             return;
         }
 
-        // Count the attempt even if it fails, so an unreachable
-        // AccountSphere is not hit again on every request.
-        Session::put(self::SESSION_FETCHED_AT_KEY, now()->timestamp);
+        // Back off briefly before the attempt: an unreachable AccountSphere
+        // is retried after FAILED_REFRESH_RETRY seconds instead of on every
+        // request, while a stale profile (groups, roles) is not kept for a
+        // whole TTL. A successful refresh stamps the real fetch time.
+        Session::put(
+            self::SESSION_FETCHED_AT_KEY,
+            now()->timestamp - $ttl + min(self::FAILED_REFRESH_RETRY, $ttl)
+        );
 
         $this->refreshUserData($user);
     }

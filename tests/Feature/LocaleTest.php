@@ -79,7 +79,7 @@ test('a stale profile is refreshed so a language change arrives without a new lo
         ->assertSessionHas(CodeSphereService::SESSION_USER_KEY.'.language', 'en');
 });
 
-test('a failed refresh keeps the cached profile and is not retried on every request', function () {
+test('a failed refresh keeps the cached profile and is retried after a short backoff', function () {
     Http::fake(['*/api/user/profile' => Http::failedConnection()]);
 
     $this->actingAs(codeSphereUser())
@@ -89,8 +89,11 @@ test('a failed refresh keeps the cached profile and is not retried on every requ
         ->assertSeeText('de|de');
 
     $this->get('/_locale')->assertSeeText('de|de');
-
     Http::assertSentCount(1);
+
+    $this->travel(CodeSphereService::FAILED_REFRESH_RETRY + 1)->seconds();
+    $this->get('/_locale')->assertOk();
+    Http::assertSentCount(2);
 });
 
 test('the refresh can be disabled', function () {

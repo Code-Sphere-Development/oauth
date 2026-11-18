@@ -154,7 +154,7 @@ The package adds two middleware to the `web` group:
 
 - `RefreshProfileMiddleware` re-fetches the session-cached profile once it is
   older than `cache_ttl` (default 15 minutes). A failed refresh keeps the cached
-  profile and is retried only after the next `cache_ttl`. Disable with
+  profile and is retried after 60 seconds. Disable with
   `CODESPHERE_REFRESH_PROFILE=false`.
 - `LangMiddleware` sets the app and Carbon locale from, in this order:
   1. `session('locale')` — an explicit language switch inside your app
