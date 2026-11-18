@@ -91,6 +91,13 @@ test('a failed refresh keeps the cached profile and is retried after a short bac
     $this->get('/_locale')->assertSeeText('de|de');
     Http::assertSentCount(1);
 
+    // Other sessions skip the refresh while AccountSphere is unreachable.
+    $this->flushSession()
+        ->withSession(cachedProfile('de', now()->subHour()->timestamp))
+        ->get('/_locale')
+        ->assertSeeText('de|de');
+    Http::assertSentCount(1);
+
     $this->travel(CodeSphereService::FAILED_REFRESH_RETRY + 1)->seconds();
     $this->get('/_locale')->assertOk();
     Http::assertSentCount(2);

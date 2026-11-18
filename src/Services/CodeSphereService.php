@@ -7,9 +7,11 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Throwable;
 
 /**
  * Stateless CodeSphere Accounts client.
@@ -30,6 +32,9 @@ class CodeSphereService
 
     /** Seconds to wait before retrying a failed profile refresh. */
     public const FAILED_REFRESH_RETRY = 60;
+
+    /** Cache key set app-wide while CodeSphere Accounts is unreachable. */
+    public const UNREACHABLE_CACHE_KEY = 'codesphere.unreachable';
 
     /**
      * Build the URL the browser should be redirected to in order to begin
@@ -258,6 +263,12 @@ class CodeSphereService
             return;
         }
 
+        // AccountSphere just failed to connect for some request: skip the
+        // refresh instead of making every session wait for the timeout.
+        if (Cache::has(self::UNREACHABLE_CACHE_KEY)) {
+            return;
+        }
+
         // Back off briefly before the attempt: an unreachable AccountSphere
         // is retried after FAILED_REFRESH_RETRY seconds instead of on every
         // request, while a stale profile (groups, roles) is not kept for a
@@ -286,6 +297,8 @@ class CodeSphereService
             $profile = $this->fetchUserProfile($token);
             $this->cacheProfile($profile);
         } catch (RequestException|ConnectionException $e) {
+            $this->markUnreachable($e);
+
             Log::warning('CodeSphere: failed to refresh user data', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),
@@ -315,6 +328,8 @@ class CodeSphereService
         try {
             $tokenData = $this->refreshAccessToken($user->refresh_token);
         } catch (RequestException|ConnectionException $e) {
+            $this->markUnreachable($e);
+
             Log::warning('CodeSphere: token refresh failed', [
                 'user_id' => $user->getAuthIdentifier(),
                 'error' => $e->getMessage(),
@@ -330,6 +345,16 @@ class CodeSphereService
         ])->save();
 
         return $user->access_token;
+    }
+
+    /**
+     * Pause background profile refreshes app-wide after a connection error.
+     */
+    protected function markUnreachable(Throwable $e): void
+    {
+        if ($e instanceof ConnectionException) {
+            Cache::put(self::UNREACHABLE_CACHE_KEY, true, self::FAILED_REFRESH_RETRY);
+        }
     }
 
     protected function client(): PendingRequest
