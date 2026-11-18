@@ -7,5 +7,7 @@
     "Sign-in failed": "Anmeldung fehlgeschlagen",
     "Sign in with a different account": "Mit anderem Konto anmelden",
     "Try again": "Erneut versuchen",
-    "Your session has ended. Please sign in again.": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
+    "Your session has ended. Please sign in again.": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "Please sign in again to change your language.": "Bitte melde dich erneut an, um deine Sprache zu ändern.",
+    "The language could not be saved. Please try again later.": "Die Sprache konnte nicht gespeichert werden. Bitte versuche es später erneut."
 }

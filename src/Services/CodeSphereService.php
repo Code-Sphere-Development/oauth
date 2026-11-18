@@ -2,6 +2,7 @@
 
 namespace CodeSphere\OAuth\Services;
 
+use CodeSphere\OAuth\Exceptions\MissingAccessTokenException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
@@ -159,6 +160,58 @@ class CodeSphereService
         }
 
         return (array) $response->json();
+    }
+
+    /**
+     * Save the user's settings (e.g. ['language' => 'de']) in CodeSphere
+     * Accounts and update the session-cached profile, so the change applies
+     * on the next request. Needs a token with the `settings` scope.
+     *
+     * A 400/401 marks the access as revoked (like a failed refresh); a 403
+     * means the token lacks the scope and the user has to sign in again.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed> the updated user
+     *
+     * @throws MissingAccessTokenException
+     * @throws ConnectionException
+     * @throws RequestException
+     */
+    public function updateSettings(Authenticatable $user, array $settings): array
+    {
+        $token = $this->getValidAccessToken($user);
+
+        if (! $token) {
+            throw new MissingAccessTokenException('No valid CodeSphere access token.');
+        }
+
+        try {
+            $response = $this->client()
+                ->withToken($token)
+                ->patch('/api/user/settings', $settings)
+                ->throw();
+        } catch (RequestException|ConnectionException $e) {
+            $this->markUnreachable($e);
+            $this->markRevokedIfRejected($e, [400, 401]);
+
+            Log::warning('CodeSphere: settings update failed', [
+                'user_id' => $user->getAuthIdentifier(),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+
+        $updated = $response->json('user');
+
+        if (! is_array($updated)) {
+            $updated = array_merge($this->user() ?? [], $settings);
+        }
+
+        Session::put(self::SESSION_USER_KEY, $updated);
+        Session::put(self::SESSION_FETCHED_AT_KEY, now()->timestamp);
+
+        return $updated;
     }
 
     /**
@@ -387,10 +440,12 @@ class CodeSphereService
      * A 400/401/403 from CodeSphere Accounts means the credentials are no
      * longer accepted (Passport answers a revoked refresh token with 400
      * invalid_grant). Server errors and timeouts are not a rejection.
+     *
+     * @param  list<int>  $statuses
      */
-    protected function markRevokedIfRejected(Throwable $e): void
+    protected function markRevokedIfRejected(Throwable $e, array $statuses = [400, 401, 403]): void
     {
-        if ($e instanceof RequestException && in_array($e->response->status(), [400, 401, 403], true)) {
+        if ($e instanceof RequestException && in_array($e->response->status(), $statuses, true)) {
             Session::put(self::SESSION_REVOKED_KEY, true);
         }
     }
