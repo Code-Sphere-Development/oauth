@@ -30,6 +30,9 @@ class CodeSphereService
 
     public const SESSION_FETCHED_AT_KEY = 'codesphere.fetched_at';
 
+    /** Set once CodeSphere Accounts has rejected the user's tokens. */
+    public const SESSION_REVOKED_KEY = 'codesphere.revoked';
+
     /** Seconds to wait before retrying a failed profile refresh. */
     public const FAILED_REFRESH_RETRY = 60;
 
@@ -163,6 +166,7 @@ class CodeSphereService
         Session::put(self::SESSION_USER_KEY, $profile['user'] ?? $profile);
         Session::put(self::SESSION_GROUPS_KEY, $profile['groups'] ?? []);
         Session::put(self::SESSION_FETCHED_AT_KEY, now()->timestamp);
+        Session::forget(self::SESSION_REVOKED_KEY);
     }
 
     /**
@@ -174,6 +178,7 @@ class CodeSphereService
             self::SESSION_USER_KEY,
             self::SESSION_GROUPS_KEY,
             self::SESSION_FETCHED_AT_KEY,
+            self::SESSION_REVOKED_KEY,
         ]);
     }
 
@@ -298,6 +303,7 @@ class CodeSphereService
             $this->cacheProfile($profile);
         } catch (RequestException|ConnectionException $e) {
             $this->markUnreachable($e);
+            $this->markRevokedIfRejected($e);
 
             Log::warning('CodeSphere: failed to refresh user data', [
                 'user_id' => $user->getAuthIdentifier(),
@@ -329,6 +335,7 @@ class CodeSphereService
             $tokenData = $this->refreshAccessToken($user->refresh_token);
         } catch (RequestException|ConnectionException $e) {
             $this->markUnreachable($e);
+            $this->markRevokedIfRejected($e);
 
             Log::warning('CodeSphere: token refresh failed', [
                 'user_id' => $user->getAuthIdentifier(),
@@ -354,6 +361,28 @@ class CodeSphereService
     {
         if ($e instanceof ConnectionException) {
             Cache::put(self::UNREACHABLE_CACHE_KEY, true, self::FAILED_REFRESH_RETRY);
+        }
+    }
+
+    /**
+     * Whether CodeSphere Accounts has rejected the current user's tokens
+     * (access revoked, refresh token expired, account deactivated). The
+     * user should then be signed out of the app.
+     */
+    public function accessRevoked(): bool
+    {
+        return (bool) Session::get(self::SESSION_REVOKED_KEY, false);
+    }
+
+    /**
+     * A 400/401/403 from CodeSphere Accounts means the credentials are no
+     * longer accepted (Passport answers a revoked refresh token with 400
+     * invalid_grant). Server errors and timeouts are not a rejection.
+     */
+    protected function markRevokedIfRejected(Throwable $e): void
+    {
+        if ($e instanceof RequestException && in_array($e->response->status(), [400, 401, 403], true)) {
+            Session::put(self::SESSION_REVOKED_KEY, true);
         }
     }
 

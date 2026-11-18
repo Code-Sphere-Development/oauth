@@ -6,5 +6,6 @@
     "Your account type is not allowed for this application.": "Mit diesem Kontotyp kannst du diese Anwendung nicht nutzen. Melde dich mit einem anderen CodeSphere-Konto an.",
     "Sign-in failed": "Anmeldung fehlgeschlagen",
     "Sign in with a different account": "Mit anderem Konto anmelden",
-    "Try again": "Erneut versuchen"
+    "Try again": "Erneut versuchen",
+    "Your session has ended. Please sign in again.": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
 }
